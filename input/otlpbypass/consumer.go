@@ -15,16 +15,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package otlp
+package otlpbypass
 
 import (
-	"context"
 	"sync/atomic"
 
 	"github.com/elastic/apm-data/input"
 	"github.com/elastic/apm-data/model/modelpb"
 	"go.opentelemetry.io/collector/consumer"
-	"go.opentelemetry.io/collector/pdata/plog"
 	"go.uber.org/zap"
 )
 
@@ -34,9 +32,7 @@ type ConsumerConfig struct {
 	// no logging will be performed.
 	Logger *zap.Logger
 
-	// Processor holds the modelpb.BatchProcessor which will be invoked
-	// with event batches when consuming OTLP payloads.
-	Processor modelpb.BatchProcessor
+	LogsProcessor modelpb.OTelLogsProcessor
 
 	// Semaphore holds a semaphore on which Processor.HandleStream will acquire a
 	// token before proceeding, to limit concurrency.
@@ -89,9 +85,4 @@ func (c *Consumer) Capabilities() consumer.Capabilities {
 	return consumer.Capabilities{
 		MutatesData: false,
 	}
-}
-
-type OtlpConsumer interface {
-	consumer.Logs
-	ConsumeLogsWithResult(ctx context.Context, logs plog.Logs) (input.ConsumeLogsResult, error)
 }
