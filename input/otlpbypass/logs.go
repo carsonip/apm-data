@@ -36,7 +36,9 @@ package otlpbypass
 
 import (
 	"context"
+	"time"
 
+	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/plog"
 
 	"github.com/elastic/apm-data/input"
@@ -51,15 +53,26 @@ func (c *Consumer) ConsumeLogs(ctx context.Context, logs plog.Logs) error {
 
 // ConsumeLogsWithResult consumes OpenTelemetry log data, converting into
 // the Elastic APM log model and sending to the reporter.
-func (c *Consumer) ConsumeLogsWithResult(ctx context.Context, logs plog.Logs) (input.ConsumeLogsResult, error) {
+func (c *Consumer) ConsumeLogsWithResult(ctx context.Context, ld plog.Logs) (input.ConsumeLogsResult, error) {
 	if err := semAcquire(ctx, c.sem, 1); err != nil {
 		return input.ConsumeLogsResult{}, err
 	}
 	defer c.sem.Release(1)
 
-	// FIXME(carsonip): set received ts
+	// set ObservedTimestamp
+	rls := ld.ResourceLogs()
+	for i := 0; i < rls.Len(); i++ {
+		rl := rls.At(i)
+		ills := rl.ScopeLogs()
+		for j := 0; j < ills.Len(); j++ {
+			logs := ills.At(j).LogRecords()
+			for k := 0; k < logs.Len(); k++ {
+				logs.At(k).SetObservedTimestamp(pcommon.NewTimestampFromTime(time.Now()))
+			}
+		}
+	}
 
-	if err := c.config.LogsProcessor.ProcessLogs(ctx, logs); err != nil {
+	if err := c.config.LogsProcessor.ProcessLogs(ctx, ld); err != nil {
 		return input.ConsumeLogsResult{}, err
 	}
 	return input.ConsumeLogsResult{RejectedLogRecords: 0}, nil
