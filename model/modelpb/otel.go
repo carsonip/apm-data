@@ -19,6 +19,7 @@ package modelpb
 
 import (
 	"context"
+
 	"go.opentelemetry.io/collector/pdata/plog"
 )
 
